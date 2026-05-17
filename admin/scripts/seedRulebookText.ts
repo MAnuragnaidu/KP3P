@@ -1,5 +1,5 @@
 /**
- * Extract medical-doc/IBD_Clinical_Rulebook_Final.pdf → IBD_Clinical_Rulebook_Final.txt
+ * Extract medical-doc/IBD_Clinical_Rulebook_Final2.pdf → IBD_Clinical_Rulebook_Final2.txt
  * Usage: npm run seed:rulebook-text
  */
 import { loadIbdRulebookText, ibdRulebookPdfPath } from '../src/lib/load-ibd-rulebook';

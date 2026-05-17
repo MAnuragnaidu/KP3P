@@ -88,7 +88,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       return NextResponse.json(
         {
           error:
-            'Clinical rulebook not found. Please ensure IBD_Clinical_Rulebook_Final.pdf is present in the medical-doc directory.',
+            'Clinical rulebook not found. Please ensure IBD_Clinical_Rulebook_Final2.pdf is present in the medical-doc directory.',
         },
         { status: 500 },
       );

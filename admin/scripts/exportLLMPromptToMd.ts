@@ -3,6 +3,7 @@
  *
  * Usage (from admin/):
  *   npx ts-node -P tsconfig.scripts.json scripts/exportLLMPromptToMd.ts
+ * Output: ../medical-lit/admin/LLM-Prompt-Export.md (gitignored)
  */
 import fs from 'fs';
 import path from 'path';
@@ -11,7 +12,7 @@ import { loadIbdRulebookText } from '../src/lib/load-ibd-rulebook';
 import { breakdownCareSheetPayload } from '../src/lib/llm-payload-stats';
 import { buildKP3PPrompt, type PatientData } from '../src/lib/kp3p-prompt';
 
-const OUTPUT_PATH = path.join(__dirname, '..', 'LLM-Prompt-Export.md');
+const OUTPUT_PATH = path.join(__dirname, '..', '..', 'medical-lit', 'admin', 'LLM-Prompt-Export.md');
 
 /** Same sample as countLLMPayloadTokens.ts — patient block varies per real request. */
 const SAMPLE_PATIENT: PatientData = {
@@ -93,7 +94,7 @@ Source: \`POST /api/generate-caresheet\` → \`llmProvider.generateCarePlan()\`
 | Part | Role | Source |
 |------|------|--------|
 | 1 | **System** | \`CARE_SHEET_SYSTEM_PROMPT\` |
-| 2 | **User (first text block)** | \`medical-doc/IBD_Clinical_Rulebook_Final.pdf\` (extracted text) |
+| 2 | **User (first text block)** | \`medical-doc/IBD_Clinical_Rulebook_Final2.pdf\` (extracted text) |
 | 3 | **User (second text block)** | \`buildKP3PPrompt(patient)\` |
 
 Gemini maps part 1 to \`systemInstruction\`; parts 2–3 are user \`contents\` in order.
@@ -118,7 +119,7 @@ ${fence(CARE_SHEET_SYSTEM_PROMPT)}
 
 ---
 
-## 2. User message — rulebook (\`IBD_Clinical_Rulebook_Final.pdf\`)
+## 2. User message — rulebook (\`IBD_Clinical_Rulebook_Final2.pdf\`)
 
 ${fence(rulebookText)}
 
@@ -129,6 +130,7 @@ ${fence(rulebookText)}
 ${fence(patientPrompt)}
 `;
 
+  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
   fs.writeFileSync(OUTPUT_PATH, md, 'utf8');
   console.log(`Wrote ${OUTPUT_PATH} (${stats.totalChars.toLocaleString()} chars)`);
 }

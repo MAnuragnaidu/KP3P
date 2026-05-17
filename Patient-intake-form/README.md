@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KP3P Patient intake
 
-## Getting Started
+Patient-facing Next.js app for the KP3P intake flow. Submits data to the **admin** app APIs; does not host its own database or LLM logic.
 
-First, run the development server:
+Monorepo overview: [`../README.md`](../README.md). Admin setup: [`../admin/README.md`](../admin/README.md).
+
+## Prerequisites
+
+- Node.js (LTS) and npm
+- **Admin app running** at the URL you configure (default [http://localhost:3000](http://localhost:3000))
+
+## Setup
 
 ```bash
+cd Patient-intake-form
+cp .env.example .env.local
+# NEXT_PUBLIC_API_URL must point at the admin app.
+
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001](http://localhost:3001) (dev server uses port **3001**).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [`.env.example`](.env.example).
 
-## Learn More
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_API_URL` | Base URL of the admin app (e.g. `http://localhost:3000`) |
 
-To learn more about Next.js, take a look at the following resources:
+Intake calls admin endpoints such as `POST ${NEXT_PUBLIC_API_URL}/api/patients` and drive upload routes when configured on the admin side.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server on port 3001 |
+| `npm run build` | Production build |
+| `npm run start` | Production server |
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Deploy as a separate Vercel project with **Root Directory** `Patient-intake-form`. Set `NEXT_PUBLIC_API_URL` to your production admin URL.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project layout (high level)
+
+| Path | Role |
+|------|------|
+| `src/app/` | Intake pages and routes |
+| `src/app/form/` | Main intake form (posts to admin API) |
+
+## Local documentation
+
+Agent notes and scratch files for this app are under **`../medical-lit/Patient-intake-form/`** (gitignored; not required to run the app).

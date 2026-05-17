@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
-export const IBD_RULEBOOK_PDF_FILENAME = 'IBD_Clinical_Rulebook_Final.pdf';
-const IBD_RULEBOOK_TXT_FILENAME = 'IBD_Clinical_Rulebook_Final.txt';
+export const IBD_RULEBOOK_PDF_FILENAME = 'IBD_Clinical_Rulebook_Final2.pdf';
+const IBD_RULEBOOK_TXT_FILENAME = 'IBD_Clinical_Rulebook_Final2.txt';
 
 export function ibdRulebookPdfPath(): string {
   return path.join(process.cwd(), 'medical-doc', IBD_RULEBOOK_PDF_FILENAME);
@@ -40,7 +40,7 @@ async function extractRulebookTextFromPdf(pdfPath: string): Promise<string> {
 
 /**
  * Rulebook text for the LLM: prefers cached `.txt` (fast, no pdf-parse in the bundle).
- * Falls back to extracting `IBD_Clinical_Rulebook_Final.pdf` when the cache is missing.
+ * Falls back to extracting `IBD_Clinical_Rulebook_Final2.pdf` when the cache is missing.
  */
 export async function loadIbdRulebookText(): Promise<string> {
   const txtPath = ibdRulebookTxtPath();
