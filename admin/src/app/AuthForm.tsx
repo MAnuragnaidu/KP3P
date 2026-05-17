@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { ADMIN_LOGIN_EMAIL } from '@/lib/auth-credentials';
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +17,12 @@ export default function AuthForm() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (isLogin && email.trim().toLowerCase() !== ADMIN_LOGIN_EMAIL) {
+      setError('Invalid username.');
+      setLoading(false);
+      return;
+    }
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
     const payload = isLogin ? { email, password } : { email, password, name };
@@ -50,7 +57,7 @@ export default function AuthForm() {
   return (
     <div className="animate-fade-in">
       {error && (
-        <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded text-red-200 text-sm">
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded text-sm" style={{ color: '#dc2626' }}>
           {error}
         </div>
       )}
@@ -83,7 +90,7 @@ export default function AuthForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="you@example.com"
+            placeholder="example@domain.com"
           />
         </div>
 

@@ -1,9 +1,20 @@
 'use client';
 
+import { useState } from 'react';
+import { performLogout } from '@/lib/logout-client';
+
 export default function LogoutButton() {
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/';
+    setError('');
+    setLoading(true);
+    const result = await performLogout();
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,15 +33,38 @@ export default function LogoutButton() {
           cursor: pointer;
           transition: all 0.15s;
         }
-        .logout-btn:hover {
+        .logout-btn:hover:not(:disabled) {
           color: #b91c1c;
           border-color: #fecaca;
           background: #fff1f2;
         }
+        .logout-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .logout-error {
+          font-size: 12px;
+          color: #b91c1c;
+          margin-top: 4px;
+          max-width: 200px;
+          text-align: right;
+        }
+        .logout-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
       `}</style>
-      <button className="logout-btn" onClick={handleLogout}>
-        Log out
-      </button>
+      <div className="logout-wrap">
+        <button className="logout-btn" onClick={handleLogout} disabled={loading} type="button">
+          {loading ? 'Logging out…' : 'Log out'}
+        </button>
+        {error ? (
+          <p className="logout-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </>
   );
 }

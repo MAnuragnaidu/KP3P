@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { VALID_LOGIN_PASSWORD } from '@/lib/auth-credentials';
+import { ADMIN_LOGIN_EMAIL, VALID_LOGIN_PASSWORD } from '@/lib/auth-credentials';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +21,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
+    if (email.toLowerCase() !== ADMIN_LOGIN_EMAIL) {
+      return NextResponse.json({ error: 'Invalid username.' }, { status: 401 });
+    }
+
     if (password !== VALID_LOGIN_PASSWORD) {
       return NextResponse.json(
         { error: 'Incorrect password. Please try again.' },
@@ -28,13 +32,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const role = email === 'admin@mygastro.ai' ? 'ADMIN' : 'PATIENT';
-
     const user = {
       id: Math.floor(Math.random() * 1000000),
-      email,
-      name: email.split('@')[0] ?? 'User',
-      role,
+      email: ADMIN_LOGIN_EMAIL,
+      name: 'admin',
+      role: 'ADMIN' as const,
     };
 
     const cookieStore = await cookies();

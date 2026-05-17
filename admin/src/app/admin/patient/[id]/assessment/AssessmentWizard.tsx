@@ -10,6 +10,7 @@ import {
 } from './AdminAssessmentSteps';
 import type { PatientWithUser, AssessmentFormState, AssessmentUpdateFn } from '@/types/assessment-form';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { performLogout } from '@/lib/logout-client';
 import { assessmentField, buildAssessmentFormState } from '@/lib/build-assessment-form-state';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -339,8 +340,11 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
         setIsSubmitting(false);
         return;
       }
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
+      const logoutResult = await performLogout();
+      if (!logoutResult.ok) {
+        setError(logoutResult.error);
+        setIsSubmitting(false);
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err));
       setIsSubmitting(false);
@@ -348,8 +352,11 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/');
+    setError('');
+    const logoutResult = await performLogout();
+    if (!logoutResult.ok) {
+      setError(logoutResult.error);
+    }
   };
 
   return (
