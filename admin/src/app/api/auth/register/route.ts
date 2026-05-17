@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { VALID_LOGIN_PASSWORD } from '@/lib/auth-credentials';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Name, Email, and password are required' }, { status: 400 });
+    }
+
+    if (password !== VALID_LOGIN_PASSWORD) {
+      return NextResponse.json(
+        { error: 'Incorrect password. Please try again.' },
+        { status: 401 },
+      );
     }
 
     const role = email === 'admin@mygastro.ai' ? 'ADMIN' : 'PATIENT';
