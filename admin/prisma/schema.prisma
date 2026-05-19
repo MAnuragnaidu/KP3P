@@ -42,7 +42,12 @@ smokingDetails   String
 primaryDiagnosis  String
 diseaseDuration   String
 perianalDiseaseAssessment String @default("")
+montrealAgeAtDiagnosis String @default("")
+diseaseLocation        String @default("")
+diseaseBehavior        String @default("")
+perianalDisease        String @default("")
 montrealClass     String
+sesCdScoring      String @default("{}")
 previousSurgeries String
 
 currentDiseaseActivity String

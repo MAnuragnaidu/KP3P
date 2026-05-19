@@ -279,7 +279,7 @@ Format: 3-page concise care plan. Part1(Clinical Protocol):English. Part2(Patien
           onClick={() => router.push(`/admin/patient/${patient.id}/edit`)}
           style={{
             fontSize: 12, padding: '6px 14px', borderRadius: 7,
-            border: 'none', background: '#fff', color: '#0f766e',
+            border: 'none', background: '#14b8a6', color: '#0f172a',
             cursor: 'pointer', fontWeight: 700,
             fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
           }}

@@ -3,10 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { patientCreateDataFromBody } from '@/lib/patient-create-data';
 import { getErrorMessage } from '@/lib/get-error-message';
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
-}
+import { parseJsonObjectBody } from '@/lib/parse-json-body';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -25,12 +22,10 @@ export async function PUT(request: NextRequest, context: RouteContext): Promise<
       return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 });
     }
 
-    const raw: unknown = await request.json();
-    if (!isRecord(raw)) {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    }
+    const parsed = await parseJsonObjectBody(request);
+    if (!parsed.ok) return parsed.response;
 
-    const payload = patientCreateDataFromBody(raw);
+    const payload = patientCreateDataFromBody(parsed.data);
 
     const updatedPatient = await prisma.patient.update({
       where: { id: patientId },

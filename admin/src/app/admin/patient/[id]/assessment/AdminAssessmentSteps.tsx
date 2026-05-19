@@ -1,6 +1,8 @@
 import React from 'react';
 import type { AssessmentFormState, AssessmentUpdateFn } from '@/types/assessment-form';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { composeMontrealClass } from '@/lib/montreal-classification';
+import SesCdScoringTable from './SesCdScoringTable';
 
 const inter = "'Inter', sans-serif";
 
@@ -268,6 +270,52 @@ const Divider = ({ label }: { label: string }) => (
   </h3>
 );
 
+const FieldSection = ({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) => (
+  <div style={{
+    border: '1px solid #e2e8f0',
+    borderRadius: 12,
+    padding: '18px 20px',
+    background: '#f8fafc',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  }}>
+    <div>
+      <h4 style={{
+        fontSize: 12,
+        fontWeight: 700,
+        letterSpacing: '0.07em',
+        textTransform: 'uppercase',
+        color: '#475569',
+        fontFamily: inter,
+        margin: 0,
+      }}>
+        {label}
+      </h4>
+      {description ? (
+        <p style={{
+          fontSize: 12,
+          color: '#64748b',
+          fontFamily: inter,
+          lineHeight: 1.5,
+          margin: '6px 0 0',
+        }}>
+          {description}
+        </p>
+      ) : null}
+    </div>
+    {children}
+  </div>
+);
+
 // ── Steps ─────────────────────────────────────────────────────────────
 export const AdminStep1 = ({ data, updateData }: StepComponentProps) => {
   const handleDobUpdate = (fields: Record<string, unknown>) => {
@@ -297,7 +345,6 @@ export const AdminStep1 = ({ data, updateData }: StepComponentProps) => {
         <div style={{ minWidth: 0 }}>
           {radioGroup('sex', 'Sex', ['Male', 'Female', 'Other'], data, updateData, true)}
         </div>
-        {textInput('ageAtDiagnosis', 'Age at Diagnosis', 'number', data, updateData, true)}
       </Grid2>
       <div style={{ marginTop: 20 }}>
         {textInput('occupation', 'Occupation', 'text', data, updateData)}
@@ -660,12 +707,104 @@ const PATIENT_DISEASE_DURATIONS = [
   '>10 years',
 ] as const;
 
-export const AdminStep4 = ({ data, updateData }: StepComponentProps) => (
+const MONTREAL_AGE_AT_DIAGNOSIS = [
+  'A1 (Less 16)',
+  'A2 (16 - 40)',
+  'A3 (More than 40)',
+] as const;
+
+const DISEASE_LOCATIONS = [
+  'L1 (Ileal)',
+  'L2 (Colonic)',
+  'L3 (Ileocolonic)',
+  'L4 (Upper GI)',
+] as const;
+
+const DISEASE_BEHAVIORS = [
+  'B1 (Inflamatory)',
+  'B2 (Stricturing)',
+  'B3 (Penetrqting)',
+] as const;
+
+const PERIANAL_OPTIONS = ['P (Yes)', 'No'] as const;
+
+export const AdminStep4 = ({ data, updateData }: StepComponentProps) => {
+  const updateMontrealField: AssessmentUpdateFn = (patch) => {
+    const merged = { ...(data as Record<string, unknown>), ...patch };
+    updateData({
+      ...patch,
+      montrealClass: composeMontrealClass({
+        montrealAgeAtDiagnosis: merged.montrealAgeAtDiagnosis,
+        diseaseLocation: merged.diseaseLocation,
+        diseaseBehavior: merged.diseaseBehavior,
+        perianalDisease: merged.perianalDisease,
+      }),
+    });
+  };
+
+  const montrealFields = {
+    montrealAgeAtDiagnosis: data.montrealAgeAtDiagnosis,
+    diseaseLocation: data.diseaseLocation,
+    diseaseBehavior: data.diseaseBehavior,
+    perianalDisease: data.perianalDisease,
+  };
+  const montrealClassSummary = composeMontrealClass(montrealFields);
+
+  return (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
     <Grid2>
       {radioGroup('primaryDiagnosis', 'Primary Diagnosis', [...PATIENT_PRIMARY_DIAGNOSIS], data, updateData, true)}
-      {radioGroup('diseaseDuration', 'Disease Duration', [...PATIENT_DISEASE_DURATIONS], data, updateData, true)}
+      {textInput('ageAtDiagnosis', 'Age at Diagnosis', 'number', data, updateData, true)}
     </Grid2>
+    <div>
+      {radioGroup('diseaseDuration', 'Disease Duration', [...PATIENT_DISEASE_DURATIONS], data, updateData, true)}
+    </div>
+    {data.primaryDiagnosis === "Crohn's Disease" && (
+      <FieldSection
+        label="SES-CD Scoring"
+        description="Score each variable for each segment using the dropdown"
+      >
+        <SesCdScoringTable data={data} updateData={updateData} />
+      </FieldSection>
+    )}
+    <FieldSection label="Montreal Classification">
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        flexWrap: 'wrap',
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: '#ffffff',
+        border: '1px solid #cbd5e1',
+      }}>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase',
+          color: '#475569',
+          fontFamily: inter,
+        }}>
+          Montreal Classification
+        </span>
+        <span style={{
+          fontSize: 15,
+          fontWeight: 700,
+          color: montrealClassSummary ? '#0e7490' : '#94a3b8',
+          fontFamily: inter,
+          minHeight: 20,
+        }}>
+          {montrealClassSummary}
+        </span>
+      </div>
+      <ColumnStack>
+        {radioGroup('montrealAgeAtDiagnosis', 'Age at Diagnosis', [...MONTREAL_AGE_AT_DIAGNOSIS], data, updateMontrealField, true)}
+        {radioGroup('diseaseLocation', 'Location of the disease', [...DISEASE_LOCATIONS], data, updateMontrealField, true)}
+        {radioGroup('diseaseBehavior', 'Behavior', [...DISEASE_BEHAVIORS], data, updateMontrealField, true)}
+        {radioGroup('perianalDisease', 'Perianal', [...PERIANAL_OPTIONS], data, updateMontrealField, true)}
+      </ColumnStack>
+    </FieldSection>
     {data.primaryDiagnosis === "Crohn's Disease" && (
       <FieldBox label="Perianal Disease Assessment">
         <textarea
@@ -681,10 +820,10 @@ export const AdminStep4 = ({ data, updateData }: StepComponentProps) => (
         </p>
       </FieldBox>
     )}
-    {textInput('montrealClass', 'Montreal Classification (UC: E1/E2/E3 | CD: L1-4, B1-3)', 'text', data, updateData, true)}
     {checkboxGroup('previousSurgeries', 'Previous IBD Surgeries', ['None', 'Partial Colectomy', 'Total Colectomy', 'Ileo Caecal resection', 'Perianal surgery', 'Stricturoplasty', 'Ostomy', 'Segmental resection'], data, updateData, true)}
   </div>
-);
+  );
+};
 
 export const AdminStep5 = ({ data, updateData }: StepComponentProps) => (
   <div>

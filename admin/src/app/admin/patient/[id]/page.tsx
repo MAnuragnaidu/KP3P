@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { composeMontrealClass, hasMontrealSelections } from '@/lib/montreal-classification';
 import { formatSmokingSummary } from '@/lib/smoking';
 import PatientActions from '../../../../components/PatientActions';
 import { cookies } from 'next/headers';
@@ -43,6 +44,10 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
   const parseComorbidities = (() => {
     try { return JSON.parse(patient.comorbidities || '[]'); } catch { return []; }
   })();
+
+  const montrealClassDisplay = hasMontrealSelections(patient)
+    ? composeMontrealClass(patient)
+    : '';
 
   const activityColor: Record<string, string> = {
     Remission: '#22c55e',
@@ -119,39 +124,51 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
 
         .pr-root { min-height: 100vh; background: #f1f5f9; color: #0f172a; }
 
-        /* ── HEADER ── */
+        /* ── HEADER (clinical dark) ── */
         .pr-header {
-          background: linear-gradient(135deg, #0891b2 0%, #a5f3fc 100%);
-          padding: 0 28px;
+          background: linear-gradient(165deg, #0c1222 0%, #152238 48%, #1a2d4a 100%);
+          padding: 0 28px 0;
+          border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+          box-shadow: 0 4px 24px rgba(15, 23, 42, 0.35);
+          position: relative;
+        }
+        .pr-header::after {
+          content: '';
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #2dd4bf 20%, #38bdf8 50%, #2dd4bf 80%, transparent);
+          opacity: 0.55;
         }
 
         /* top nav row */
         .pr-topnav {
-          padding: 16px 0;
+          padding: 18px 0 14px;
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
           flex-wrap: wrap;
           gap: 12px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.12);
         }
         .pr-back-link {
           display: inline-flex;
           align-items: center;
           gap: 6px;
           font-family: 'Inter', sans-serif;
-          font-size: 13px;
-          font-weight: 600;
-          color: #0f766e;
-          background: #ffffff;
-          padding: 8px 16px;
-          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #0f172a;
+          background: #14b8a6;
+          padding: 6px 14px;
+          border-radius: 7px;
+          border: none;
           text-decoration: none;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          transition: all 0.2s;
+          transition: background 0.2s;
         }
-        .pr-back-link:hover { 
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        .pr-back-link:hover {
+          background: #2dd4bf;
+          color: #0f172a;
         }
 
         /* hero row */
@@ -160,60 +177,87 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
           align-items: flex-start;
           justify-content: space-between;
           gap: 16px;
-          padding: 16px 0 0;
+          padding: 20px 0 0;
           flex-wrap: wrap;
         }
-        .pr-hero-patient { display: flex; align-items: center; gap: 14px; }
+        .pr-hero-patient { display: flex; align-items: center; gap: 16px; }
         .pr-avatar {
-          width: 52px; height: 52px;
+          width: 56px; height: 56px;
           border-radius: 14px;
-          background: #fff;
+          background: linear-gradient(145deg, #1e3a5f 0%, #0f172a 100%);
+          border: 1px solid rgba(56, 189, 248, 0.35);
           display: flex; align-items: center; justify-content: center;
-          font-size: 22px; font-weight: 700; color: #0f766e;
+          font-size: 22px; font-weight: 700; color: #5eead4;
           flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
         }
-        .pr-patient-name { font-size: clamp(1.25rem, 4.5vw, 26px); font-weight: 700; color: #fff; letter-spacing: -0.3px; line-height: 1.2; }
-        .pr-patient-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
-        .pr-mono-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.7); }
-        .pr-mono-tag b { color: #fff; }
-        .pr-dot { color: rgba(255,255,255,0.4); font-size: 8px; }
+        .pr-patient-name {
+          font-size: clamp(1.25rem, 4.5vw, 28px);
+          font-weight: 700;
+          color: #f8fafc;
+          letter-spacing: -0.4px;
+          line-height: 1.2;
+        }
+        .pr-patient-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+        .pr-mono-tag { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #94a3b8; }
+        .pr-mono-tag b { color: #e2e8f0; font-weight: 600; font-size: 14px; }
+        .pr-dot { color: #475569; font-size: 10px; }
         .pr-activity-pill {
           display: inline-flex; align-items: center; gap: 5px;
-          padding: 3px 10px; border-radius: 20px;
-          font-size: 11px; font-weight: 600;
+          padding: 5px 12px; border-radius: 20px;
+          font-size: 14px; font-weight: 600;
+          background: rgba(15, 23, 42, 0.45) !important;
         }
         .pr-activity-dot { width: 6px; height: 6px; border-radius: 50%; }
 
         /* chips */
-        .pr-chips-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 14px; }
-        .pr-chip {
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.2);
-          border-bottom: none;
-          border-radius: 10px 10px 0 0;
-          padding: 8px 14px;
-          display: flex; flex-direction: column; gap: 2px;
-          min-width: 80px;
+        .pr-chips-row {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 18px;
+          padding-bottom: 20px;
         }
-        .pr-chip-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.07em; }
-        .pr-chip-value { font-size: 13px; font-weight: 600; color: #fff; }
+        .pr-chip {
+          background: #14b8a6;
+          border: none;
+          border-radius: 7px;
+          padding: 8px 14px;
+          display: flex; flex-direction: column; gap: 3px;
+          min-width: 88px;
+          box-shadow: 0 2px 8px rgba(20, 184, 166, 0.25);
+        }
+        .pr-chip-label {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9px;
+          color: rgba(15, 23, 42, 0.65);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 600;
+        }
+        .pr-chip-value {
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+          font-family: 'Inter', sans-serif;
+        }
 
-        /* action buttons */
+        /* action buttons (legacy classes; PatientActions uses inline styles) */
         .pr-btn-ghost {
           font-size: 12px; padding: 6px 14px; border-radius: 7px;
-          border: 1px solid rgba(255,255,255,0.35);
-          background: rgba(255,255,255,0.08);
-          color: #fff; cursor: pointer; font-weight: 500;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          background: rgba(255, 255, 255, 0.06);
+          color: #e2e8f0; cursor: pointer; font-weight: 500;
           font-family: 'Inter', sans-serif; transition: all 0.2s;
         }
-        .pr-btn-ghost:hover { background: rgba(255,255,255,0.15); }
+        .pr-btn-ghost:hover { background: rgba(255, 255, 255, 0.12); }
         .pr-btn-white {
           font-size: 12px; padding: 6px 14px; border-radius: 7px;
-          border: none; background: #fff; color: #0f766e;
+          border: none; background: #14b8a6; color: #0f172a;
           cursor: pointer; font-weight: 700;
           font-family: 'Inter', sans-serif; transition: all 0.2s;
         }
-        .pr-btn-white:hover { background: #f0fdfa; }
+        .pr-btn-white:hover { background: #2dd4bf; }
 
         /* ── BODY ── */
         .pr-body {
@@ -230,7 +274,7 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
           .pr-back-link { justify-content: center; width: 100%; box-sizing: border-box; min-height: 44px; }
           .pr-hero-patient { flex-direction: column; align-items: flex-start; }
           .pr-chips-row { gap: 8px; }
-          .pr-chip { min-width: 0; flex: 1 1 calc(50% - 4px); border-radius: 10px; }
+          .pr-chip { min-width: 0; flex: 1 1 calc(50% - 4px); }
         }
 
         /* ── CARD ── */
@@ -243,6 +287,9 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
         /* field grid */
         .pr-field-grid { display: grid; grid-template-columns: 1fr 1fr; padding: 4px 8px 8px; }
         @media (max-width: 540px) { .pr-field-grid { grid-template-columns: 1fr; } }
+        .pr-field-section { grid-column: 1 / -1; margin: 4px 8px 8px; padding: 12px 14px; border: 0.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+        .pr-field-section-title { font-size: 10px; font-weight: 700; color: #475569; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; padding: 0 8px; }
+        .pr-field-section .pr-field-grid { padding: 0; }
         .pr-field { padding: 7px 8px; border-radius: 7px; transition: background 0.15s; }
         .pr-field:hover { background: #f8fafc; }
         .pr-field-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
@@ -385,11 +432,19 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
                 <span className="pr-card-num">02</span>
               </div>
               <div className="pr-field-grid">
-                <div className="pr-field">
+                                <div className="pr-field">
                   <div className="pr-field-label">Primary Diagnosis</div>
                   <div className="pr-field-value" style={{ color: '#7c3aed', fontWeight: 600 }}>{patient.primaryDiagnosis || '—'}</div>
                 </div>
                 <div className="pr-field">
+                  <div className="pr-field-label">Age at Diagnosis</div>
+                  <div className="pr-field-value">
+                    {Number.isFinite(patient.ageAtDiagnosis)
+                      ? `${patient.ageAtDiagnosis} yrs`
+                      : '—'}
+                  </div>
+                </div>
+                <div className="pr-field" style={{ gridColumn: '1 / -1' }}>
                   <div className="pr-field-label">Disease Duration</div>
                   <div className="pr-field-value">{patient.diseaseDuration || '—'}</div>
                 </div>
@@ -401,9 +456,33 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
                     </div>
                   </div>
                 )}
-                <div className="pr-field">
-                  <div className="pr-field-label">Montreal Classification</div>
-                  <div className="pr-field-value">{patient.montrealClass || '—'}</div>
+                <div className="pr-field-section">
+                  <div className="pr-field-section-title" style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <span>Montreal Classification</span>
+                    {montrealClassDisplay ? (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'none', letterSpacing: 0 }}>
+                        {montrealClassDisplay}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="pr-field-grid">
+                    <div className="pr-field">
+                      <div className="pr-field-label">Age at Diagnosis</div>
+                      <div className="pr-field-value">{patient.montrealAgeAtDiagnosis || '—'}</div>
+                    </div>
+                    <div className="pr-field">
+                      <div className="pr-field-label">Location of the disease</div>
+                      <div className="pr-field-value">{patient.diseaseLocation || '—'}</div>
+                    </div>
+                    <div className="pr-field">
+                      <div className="pr-field-label">Behavior</div>
+                      <div className="pr-field-value">{patient.diseaseBehavior || '—'}</div>
+                    </div>
+                    <div className="pr-field">
+                      <div className="pr-field-label">Perianal</div>
+                      <div className="pr-field-value">{patient.perianalDisease || '—'}</div>
+                    </div>
+                  </div>
                 </div>
                 <div className="pr-field">
                   <div className="pr-field-label">Previous Surgeries</div>
@@ -610,7 +689,9 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
               <div className="pr-sidebar-big">
                 <div className="pr-sidebar-big-val" style={{ color: actColor }}>{patient.currentDiseaseActivity || '—'}</div>
                 <div className="pr-sidebar-big-label">{patient.primaryDiagnosis}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5 }}>Montreal: {patient.montrealClass || '—'}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5 }}>
+                  Montreal: {montrealClassDisplay || '—'}
+                </div>
               </div>
             </div>
 

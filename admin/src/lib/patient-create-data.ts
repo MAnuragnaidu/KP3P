@@ -1,6 +1,8 @@
 /** Build Prisma Patient.create `data` from intake JSON (handles MultiStepForm pre-stringified arrays). */
 
 import type { Prisma } from '@prisma/client';
+import { composeMontrealClass, hasMontrealSelections } from '@/lib/montreal-classification';
+import { normalizeSesCdScoring, parseSesCdScoring, serializeSesCdScoring } from '@/lib/ses-cd-scoring';
 
 function normalizeJsonArray(val: unknown): string {
   if (Array.isArray(val)) return JSON.stringify(val);
@@ -99,7 +101,13 @@ export function patientCreateDataFromBody(body: Record<string, unknown>): Prisma
     diseaseDuration: typeof b.diseaseDuration === 'string' ? b.diseaseDuration : '',
     perianalDiseaseAssessment:
       typeof b.perianalDiseaseAssessment === 'string' ? b.perianalDiseaseAssessment.trim() : '',
-    montrealClass: typeof b.montrealClass === 'string' ? b.montrealClass : '',
+    montrealAgeAtDiagnosis:
+      typeof b.montrealAgeAtDiagnosis === 'string' ? b.montrealAgeAtDiagnosis : '',
+    diseaseLocation: typeof b.diseaseLocation === 'string' ? b.diseaseLocation : '',
+    diseaseBehavior: typeof b.diseaseBehavior === 'string' ? b.diseaseBehavior : '',
+    perianalDisease: typeof b.perianalDisease === 'string' ? b.perianalDisease : '',
+    montrealClass: hasMontrealSelections(b) ? composeMontrealClass(b) : '',
+    sesCdScoring: serializeSesCdScoring(normalizeSesCdScoring(parseSesCdScoring(b.sesCdScoring))),
     previousSurgeries: normalizeJsonArray(b.previousSurgeries),
     currentDiseaseActivity: typeof b.currentDiseaseActivity === 'string' ? b.currentDiseaseActivity : '',
     stoolFrequency: typeof b.stoolFrequency === 'string' ? b.stoolFrequency : '',

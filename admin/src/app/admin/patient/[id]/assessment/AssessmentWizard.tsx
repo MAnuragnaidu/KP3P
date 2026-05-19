@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,7 +11,11 @@ import {
 import type { PatientWithUser, AssessmentFormState, AssessmentUpdateFn } from '@/types/assessment-form';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { performLogout } from '@/lib/logout-client';
-import { assessmentField, buildAssessmentFormState } from '@/lib/build-assessment-form-state';
+import {
+  assessmentField,
+  buildAssessmentFormState,
+  buildAssessmentSavePayload,
+} from '@/lib/build-assessment-form-state';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -48,6 +52,7 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
   const [isSavingStep, setIsSavingStep] = useState(false);
   const [error, setError] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const saveInFlightRef = useRef(false);
 
   const totalSteps = 8;
 
@@ -119,9 +124,6 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
       const caRaw = assessmentField(formData, 'currentAge');
       const caNum = typeof caRaw === 'number' ? caRaw : typeof caRaw === 'string' ? Number(caRaw) : NaN;
       if (!Number.isFinite(caNum)) missing.push('Current Age');
-      const adRaw = assessmentField(formData, 'ageAtDiagnosis');
-      const adNum = typeof adRaw === 'number' ? adRaw : typeof adRaw === 'string' ? Number(adRaw) : NaN;
-      if (!Number.isFinite(adNum)) missing.push('Age at Diagnosis');
 
       const email = String(formData?.email ?? '').trim();
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -138,8 +140,14 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
     if (currentStep === 2) {
       const missing: string[] = [];
       if (!isNonEmpty(formData?.primaryDiagnosis)) missing.push('Primary Diagnosis');
+      const adRaw = assessmentField(formData, 'ageAtDiagnosis');
+      const adNum = typeof adRaw === 'number' ? adRaw : typeof adRaw === 'string' ? Number(adRaw) : NaN;
+      if (!Number.isFinite(adNum)) missing.push('Age at Diagnosis');
       if (!isNonEmpty(formData?.diseaseDuration)) missing.push('Disease Duration');
-      if (!isNonEmpty(formData?.montrealClass)) missing.push('Montreal Classification');
+      if (!isNonEmpty(formData?.montrealAgeAtDiagnosis)) missing.push('Age at Diagnosis (Montreal)');
+      if (!isNonEmpty(formData?.diseaseLocation)) missing.push('Location of the disease');
+      if (!isNonEmpty(formData?.diseaseBehavior)) missing.push('Behavior');
+      if (!isNonEmpty(formData?.perianalDisease)) missing.push('Perianal');
 
       let surgeries: unknown[] = [];
       const raw = formData?.previousSurgeries;
@@ -259,12 +267,27 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
   };
 
   const persistProgress = async (overrides?: Record<string, unknown>): Promise<boolean> => {
+    if (saveInFlightRef.current) return false;
+    saveInFlightRef.current = true;
+
     try {
-      const payload = { ...(formData as unknown as Record<string, unknown>), ...overrides };
+      let body: string;
+      try {
+        body = JSON.stringify(buildAssessmentSavePayload(formData, overrides));
+      } catch {
+        setError('Could not save — form data could not be serialized.');
+        return false;
+      }
+
+      if (!body) {
+        setError('Could not save — empty request body.');
+        return false;
+      }
+
       const res = await fetch(`/api/patient/${patient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body,
       });
       if (!res.ok) {
         let msg = 'Failed to save progress';
@@ -279,8 +302,13 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
       }
       return true;
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return false;
+      }
       setError(getErrorMessage(err));
       return false;
+    } finally {
+      saveInFlightRef.current = false;
     }
   };
 
@@ -362,8 +390,6 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
   return (
     <>
       <style>{`
-        .aw-layout { flex-direction: row; }
-        .aw-sidebar { width: 250px; display: flex; }
         .aw-main { padding: 32px 40px; max-width: 100%; overflow-x: hidden; }
         .aw-stepper { justify-content: space-between; }
         .aw-bottom-nav { flex-direction: row; }
@@ -376,9 +402,6 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
         }
 
         @media (max-width: 768px) {
-          .aw-layout { flex-direction: column; }
-          .aw-sidebar { width: 100%; padding: 16px; }
-          .aw-sidebar-desc, .aw-sidebar-steps, .aw-sidebar-footer { display: none; }
           .aw-main { padding: 16px; }
           .aw-stepper { overflow-x: auto; padding-bottom: 16px; margin-bottom: 16px; justify-content: flex-start; gap: 20px; -webkit-overflow-scrolling: touch; }
           .aw-bottom-nav { flex-direction: column; gap: 12px; }
@@ -448,100 +471,9 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
         </div>
       </div>
 
-      {/* ── BODY: sidebar + main ── */}
+      {/* ── MAIN CONTENT ── */}
       <div className="aw-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-        {/* ── LEFT SIDEBAR ── */}
-        <div className="aw-sidebar" style={{
-          flexShrink: 0,
-          background: 'linear-gradient(135deg, #0891b2 0%, #a5f3fc 100%)',
-          padding: '0 20px 20px 20px',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            position: 'absolute', top: -50, right: -50,
-            width: 180, height: 180, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.08)', pointerEvents: 'none',
-          }} />
-
-          {/* Title row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, position: 'relative', zIndex: 1, paddingTop: 24 }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
-              fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-              <path d="M9 14h6"></path><path d="M9 18h6"></path><path d="M9 10h6"></path>
-            </svg>
-            <span style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: '-0.2px', fontFamily: "'Inter', sans-serif" }}>
-              Clinical Assessment
-            </span>
-          </div>
-
-          <p className="aw-sidebar-desc" style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11.5, lineHeight: 1.6, marginBottom: 20, position: 'relative', zIndex: 1, fontFamily: "'Inter', sans-serif" }}>
-            8 Steps to complete the patient assessment
-          </p>
-
-          {/* Patient chip */}
-          <div style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 10, padding: '8px 12px', marginBottom: 22,
-            position: 'relative', zIndex: 1,
-          }}>
-            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 2, fontFamily: "'Inter', sans-serif" }}>Patient</p>
-            <p style={{ color: '#ffffff', fontSize: 14, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
-              {patient.name ?? patient.user?.name ?? 'Unknown'}
-            </p>
-          </div>
-
-          {/* Step list */}
-          <div className="aw-sidebar-steps" style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, position: 'relative', zIndex: 1 }}>
-            {stepLabels.map((label, idx) => {
-              const stepNum = idx + 1;
-              const isActive = stepNum === currentStep;
-              const isPast = stepNum < currentStep;
-              return (
-                <div key={idx} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '5px 8px', borderRadius: 8,
-                  background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
-                  transition: 'background 0.2s',
-                }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 700,
-                    background: isActive ? '#ffffff' : isPast ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
-                    color: isActive ? '#0891b2' : '#ffffff',
-                    fontFamily: "'Inter', sans-serif",
-                  }}>
-                    {isPast ? '✓' : stepNum}
-                  </div>
-                  <span style={{
-                    fontSize: 11, fontWeight: isActive ? 700 : 400,
-                    color: isActive ? '#ffffff' : 'rgba(255,255,255,0.7)',
-                    fontFamily: "'Inter', sans-serif",
-                  }}>
-                    {label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Footer */}
-          <div className="aw-sidebar-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 12, marginTop: 12, position: 'relative', zIndex: 1 }}>
-            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, fontFamily: "'Inter', sans-serif" }}>
-              Step <span style={{ color: '#ffffff', fontWeight: 700 }}>{currentStep}</span> of {totalSteps}
-            </p>
-          </div>
-        </div>
-
-        {/* ── RIGHT MAIN PANEL ── */}
         <div className="aw-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fafafa', minWidth: 0, overflowY: 'auto' }}>
-
           {/* Horizontal step indicator */}
           <div className="aw-stepper" style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 28, paddingBottom: 24, borderBottom: '0.5px solid #e2e8f0', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 15, left: 30, right: 30, height: 2, background: '#e2e8f0', zIndex: 0 }} />
@@ -578,6 +510,16 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
               );
             })}
           </div>
+
+          <h2 style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#0f172a',
+            marginBottom: 20,
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            Clinical Assessment for {patient.name ?? patient.user?.name ?? 'Unknown'}
+          </h2>
 
           {/* Step heading */}
           <div style={{ marginBottom: 20 }}>

@@ -228,6 +228,26 @@ export default function PatientEditForm({ patient }: { patient: PatientWithUser 
           .pr-field-grid { grid-template-columns: 1fr; }
         }
 
+        .pr-field-section {
+          grid-column: 1 / -1;
+          padding: 14px 16px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: #f8fafc;
+        }
+        .pr-field-section-title {
+          font-size: 11px;
+          font-weight: 700;
+          color: #475569;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          margin-bottom: 12px;
+        }
+        .pr-field-section .pr-field-grid {
+          padding: 0;
+          gap: 12px;
+        }
+
         .pr-field {
           display: flex;
           flex-direction: column;
@@ -456,8 +476,16 @@ export default function PatientEditForm({ patient }: { patient: PatientWithUser 
             </div>
             <div className="pr-field-grid">
               {renderField('Primary Diagnosis', 'primaryDiagnosis')}
-              {renderField('Montreal Classification', 'montrealClass')}
               {renderField('Disease Duration', 'diseaseDuration')}
+              <div className="pr-field-section">
+                <div className="pr-field-section-title">Montreal Classification</div>
+                <div className="pr-field-grid">
+                  {renderField('Age at Diagnosis', 'montrealAgeAtDiagnosis')}
+                  {renderField('Location of the disease', 'diseaseLocation')}
+                  {renderField('Behavior', 'diseaseBehavior')}
+                  {renderField('Perianal', 'perianalDisease')}
+                </div>
+              </div>
               {renderArrayField('Previous Surgeries', 'previousSurgeries')}
             </div>
           </div>

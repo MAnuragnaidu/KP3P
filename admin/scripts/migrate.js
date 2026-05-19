@@ -49,7 +49,12 @@ async function main() {
           primaryDiagnosis: patient.primaryDiagnosis || '',
           diseaseDuration: patient.diseaseDuration || '',
           perianalDiseaseAssessment: patient.perianalDiseaseAssessment || '',
+          montrealAgeAtDiagnosis: patient.montrealAgeAtDiagnosis || '',
+          diseaseLocation: patient.diseaseLocation || '',
+          diseaseBehavior: patient.diseaseBehavior || '',
+          perianalDisease: patient.perianalDisease || '',
           montrealClass: patient.montrealClass || '',
+          sesCdScoring: patient.sesCdScoring || '{}',
           previousSurgeries: patient.previousSurgeries || '[]',
           
           currentDiseaseActivity: patient.currentDiseaseActivity || '',

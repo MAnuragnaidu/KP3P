@@ -1,3 +1,5 @@
+import { composeMontrealClass, hasMontrealSelections } from '@/lib/montreal-classification';
+import { normalizeSesCdScoring, parseSesCdScoring, serializeSesCdScoring } from '@/lib/ses-cd-scoring';
 import { preferredLanguageScalarForForm } from '@/lib/preferredLanguagePrompt';
 import { normalizeSmokingStatusForForm } from '@/lib/smoking';
 import type { PatientWithUser, AssessmentFormState } from '@/types/assessment-form';
@@ -49,16 +51,112 @@ export function buildAssessmentFormState(patient: PatientWithUser): AssessmentFo
     documents = [];
   }
 
+  const montrealClass = hasMontrealSelections(patient)
+    ? composeMontrealClass(patient)
+    : '';
+
+  const sesCdScoring = serializeSesCdScoring(
+    normalizeSesCdScoring(parseSesCdScoring(patient.sesCdScoring)),
+  );
+
   return {
     ...patient,
     previousSurgeries,
     previousTreatmentsTried,
     comorbidities,
     documents,
+    montrealClass,
+    sesCdScoring,
     smokingStatus: normalizeSmokingStatusForForm(patient.smokingStatus),
     smokingDetails: patient.smokingDetails ?? '',
     preferredLanguage: preferredLanguageScalarForForm(patient.preferredLanguage),
   };
+}
+
+/** Patient scalar / JSON fields sent to PUT /api/patient/[id] (excludes relations and metadata). */
+const PATIENT_SAVE_FIELD_KEYS = [
+  'name',
+  'email',
+  'mrn',
+  'contactPhone',
+  'placeOfLiving',
+  'referredBy',
+  'dateOfBirth',
+  'currentAge',
+  'ageAtDiagnosis',
+  'sex',
+  'smokingStatus',
+  'smokingDetails',
+  'primaryDiagnosis',
+  'diseaseDuration',
+  'perianalDiseaseAssessment',
+  'montrealAgeAtDiagnosis',
+  'diseaseLocation',
+  'diseaseBehavior',
+  'perianalDisease',
+  'montrealClass',
+  'sesCdScoring',
+  'previousSurgeries',
+  'currentDiseaseActivity',
+  'stoolFrequency',
+  'bloodInStool',
+  'abdominalPain',
+  'impactOnQoL',
+  'weightLoss',
+  'activityScore',
+  'dateMostRecentLabs',
+  'recentLabValues',
+  'dateMostRecentColonoscopy',
+  'colonoscopyFindings',
+  'recentImaging',
+  'mostRecentDexaScan',
+  'currentIbdMedications',
+  'failedTreatments',
+  'tdmResults',
+  'currentSupplements',
+  'responseToTreatment',
+  'steroidUse',
+  'previousTreatmentsTried',
+  'tbScreening',
+  'hepBSurfaceAg',
+  'hepBSurfaceAb',
+  'hepBCoreAb',
+  'antiHcv',
+  'antiHiv',
+  'influenza',
+  'covid19',
+  'pneumococcal',
+  'hepatitisB',
+  'hepatitisA',
+  'hepatitisE',
+  'zoster',
+  'mmrVaricella',
+  'tetanusTdap',
+  'comorbidities',
+  'extraintestinalManif',
+  'pregnancyPlanning',
+  'preferredLanguage',
+  'occupation',
+  'specialConsiderations',
+  'documents',
+  'assessmentComplete',
+] as const;
+
+/** Build a JSON-safe payload for assessment saves (no nested user / Prisma metadata). */
+export function buildAssessmentSavePayload(
+  formData: AssessmentFormState,
+  overrides?: Record<string, unknown>,
+): Record<string, unknown> {
+  const source = formData as Record<string, unknown>;
+  const payload: Record<string, unknown> = {};
+
+  for (const key of PATIENT_SAVE_FIELD_KEYS) {
+    if (key in source) {
+      payload[key] = source[key];
+    }
+  }
+
+  return { ...payload, ...overrides };
 }
 
 export { assessmentField };
