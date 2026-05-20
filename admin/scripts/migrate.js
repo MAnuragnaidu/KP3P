@@ -57,6 +57,7 @@ async function main() {
           sesCdScoring: patient.sesCdScoring || '{}',
           sesCdClinicalNotes: patient.sesCdClinicalNotes || '',
           upperGiFindings: patient.upperGiFindings || '{}',
+          ucEndoscopicScoring: patient.ucEndoscopicScoring || '{}',
           previousSurgeries: patient.previousSurgeries || '[]',
           
           currentDiseaseActivity: patient.currentDiseaseActivity || '',

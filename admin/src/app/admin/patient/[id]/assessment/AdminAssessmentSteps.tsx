@@ -4,6 +4,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
 import { composeMontrealClass } from '@/lib/montreal-classification';
 import SesCdScoringTable from './SesCdScoringTable';
 import UpperGiFindingsTable from './UpperGiFindingsTable';
+import UcEndoscopicScoringTool from './UcEndoscopicScoringTool';
 
 const inter = "'Inter', sans-serif";
 
@@ -760,6 +761,14 @@ export const AdminStep4 = ({ data, updateData }: StepComponentProps) => {
     <div>
       {radioGroup('diseaseDuration', 'Disease Duration', [...PATIENT_DISEASE_DURATIONS], data, updateData, true)}
     </div>
+    {data.primaryDiagnosis === 'Ulcerative Colitis' && (
+      <FieldSection
+        label="UC Endoscopic Scoring Tool"
+        description="Ulcerative Colitis  ·  Mayo Endoscopic Score  +  UCEIS  ·  Auto-calculated"
+      >
+        <UcEndoscopicScoringTool data={data} updateData={updateData} />
+      </FieldSection>
+    )}
     {data.primaryDiagnosis === "Crohn's Disease" && (
       <FieldSection
         label="SES-CD Scoring"

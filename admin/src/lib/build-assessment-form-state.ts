@@ -5,6 +5,11 @@ import {
   parseUpperGiFindings,
   serializeUpperGiFindings,
 } from '@/lib/upper-gi-findings';
+import {
+  normalizeUcEndoscopicScoring,
+  parseUcEndoscopicScoring,
+  serializeUcEndoscopicScoring,
+} from '@/lib/uc-endoscopic-scoring';
 import { preferredLanguageScalarForForm } from '@/lib/preferredLanguagePrompt';
 import { normalizeSmokingStatusForForm } from '@/lib/smoking';
 import type { PatientWithUser, AssessmentFormState } from '@/types/assessment-form';
@@ -68,6 +73,10 @@ export function buildAssessmentFormState(patient: PatientWithUser): AssessmentFo
     normalizeUpperGiFindings(parseUpperGiFindings(patient.upperGiFindings)),
   );
 
+  const ucEndoscopicScoring = serializeUcEndoscopicScoring(
+    normalizeUcEndoscopicScoring(parseUcEndoscopicScoring(patient.ucEndoscopicScoring)),
+  );
+
   return {
     ...patient,
     previousSurgeries,
@@ -77,6 +86,7 @@ export function buildAssessmentFormState(patient: PatientWithUser): AssessmentFo
     montrealClass,
     sesCdScoring,
     upperGiFindings,
+    ucEndoscopicScoring,
     smokingStatus: normalizeSmokingStatusForForm(patient.smokingStatus),
     smokingDetails: patient.smokingDetails ?? '',
     preferredLanguage: preferredLanguageScalarForForm(patient.preferredLanguage),
@@ -108,6 +118,7 @@ const PATIENT_SAVE_FIELD_KEYS = [
   'sesCdScoring',
   'sesCdClinicalNotes',
   'upperGiFindings',
+  'ucEndoscopicScoring',
   'previousSurgeries',
   'currentDiseaseActivity',
   'stoolFrequency',

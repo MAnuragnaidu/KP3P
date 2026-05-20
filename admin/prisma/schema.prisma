@@ -50,6 +50,7 @@ montrealClass     String
 sesCdScoring         String @default("{}")
 sesCdClinicalNotes   String @default("")
 upperGiFindings      String @default("{}")
+ucEndoscopicScoring  String @default("{}")
 previousSurgeries String
 
 currentDiseaseActivity String

@@ -81,6 +81,7 @@ export async function GET(): Promise<NextResponse> {
           sesCdScoring: strField(patient, 'sesCdScoring') || '{}',
           sesCdClinicalNotes: strField(patient, 'sesCdClinicalNotes'),
           upperGiFindings: strField(patient, 'upperGiFindings') || '{}',
+          ucEndoscopicScoring: strField(patient, 'ucEndoscopicScoring') || '{}',
           previousSurgeries: strField(patient, 'previousSurgeries') || '[]',
           currentDiseaseActivity: strField(patient, 'currentDiseaseActivity'),
           stoolFrequency: strField(patient, 'stoolFrequency'),

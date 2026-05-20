@@ -4,6 +4,11 @@ import type { Prisma } from '@prisma/client';
 import { composeMontrealClass, hasMontrealSelections } from '@/lib/montreal-classification';
 import { normalizeSesCdScoring, parseSesCdScoring, serializeSesCdScoring } from '@/lib/ses-cd-scoring';
 import {
+  normalizeUcEndoscopicScoring,
+  parseUcEndoscopicScoring,
+  serializeUcEndoscopicScoring,
+} from '@/lib/uc-endoscopic-scoring';
+import {
   normalizeUpperGiFindings,
   parseUpperGiFindings,
   serializeUpperGiFindings,
@@ -117,6 +122,9 @@ export function patientCreateDataFromBody(body: Record<string, unknown>): Prisma
       typeof b.sesCdClinicalNotes === 'string' ? b.sesCdClinicalNotes.trim() : '',
     upperGiFindings: serializeUpperGiFindings(
       normalizeUpperGiFindings(parseUpperGiFindings(b.upperGiFindings)),
+    ),
+    ucEndoscopicScoring: serializeUcEndoscopicScoring(
+      normalizeUcEndoscopicScoring(parseUcEndoscopicScoring(b.ucEndoscopicScoring)),
     ),
     previousSurgeries: normalizeJsonArray(b.previousSurgeries),
     currentDiseaseActivity: typeof b.currentDiseaseActivity === 'string' ? b.currentDiseaseActivity : '',
