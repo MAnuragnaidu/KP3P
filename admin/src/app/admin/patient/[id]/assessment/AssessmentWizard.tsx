@@ -53,6 +53,7 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
   const [error, setError] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const saveInFlightRef = useRef(false);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
 
   const totalSteps = 8;
 
@@ -61,6 +62,11 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
       setMounted(true);
     });
   }, []);
+
+  useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [currentStep]);
 
   if (!patient) {
     return (
@@ -473,7 +479,11 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
 
       {/* ── MAIN CONTENT ── */}
       <div className="aw-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <div className="aw-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fafafa', minWidth: 0, overflowY: 'auto' }}>
+        <div
+          ref={mainScrollRef}
+          className="aw-main"
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fafafa', minWidth: 0, overflowY: 'auto' }}
+        >
           {/* Horizontal step indicator */}
           <div className="aw-stepper" style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 28, paddingBottom: 24, borderBottom: '0.5px solid #e2e8f0', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 15, left: 30, right: 30, height: 2, background: '#e2e8f0', zIndex: 0 }} />
