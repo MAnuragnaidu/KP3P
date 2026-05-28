@@ -6,7 +6,7 @@ export function extractMontrealCode(value: string): string | null {
   const parenMatch = t.match(/^([ABEPL]\d*)\s*\(/);
   if (parenMatch) return parenMatch[1];
 
-  const dashMatch = t.match(/^([ABEL]\d+)-/i);
+  const dashMatch = t.match(/^([ABEL]\d+)\s*-/i);
   if (dashMatch) return dashMatch[1].toUpperCase();
 
   if (t === 'P (Yes)') return 'P';
