@@ -99,6 +99,7 @@ export async function GET(): Promise<NextResponse> {
           recentImaging: strField(patient, 'recentImaging'),
           mostRecentDexaScan: strField(patient, 'mostRecentDexaScan'),
           currentIbdMedications: strField(patient, 'currentIbdMedications'),
+          currentIbdMedicationsRows: strField(patient, 'currentIbdMedicationsRows') || '[]',
           failedTreatments: strField(patient, 'failedTreatments'),
           tdmResults: strField(patient, 'tdmResults'),
           currentSupplements: strField(patient, 'currentSupplements'),

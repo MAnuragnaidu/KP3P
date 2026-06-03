@@ -70,8 +70,9 @@ colonoscopyFindings  String @default("")
 recentImaging        String @default("")
 mostRecentDexaScan   String @default("")
 
-currentIbdMedications   String
-failedTreatments        String
+currentIbdMedications     String
+currentIbdMedicationsRows String @default("[]")
+failedTreatments          String
 tdmResults              String
 currentSupplements      String
 responseToTreatment     String

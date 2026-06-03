@@ -17,6 +17,11 @@ import {
   parseIbdInvestigations,
   serializeIbdInvestigations,
 } from '@/lib/ibd-investigations';
+import {
+  normalizeCurrentIbdMedications,
+  parseCurrentIbdMedications,
+  serializeCurrentIbdMedications,
+} from '@/lib/current-ibd-medications';
 import type { PatientWithUser, AssessmentFormState } from '@/types/assessment-form';
 
 function assessmentField(data: AssessmentFormState, key: string): unknown {
@@ -85,6 +90,10 @@ export function buildAssessmentFormState(patient: PatientWithUser): AssessmentFo
   const parsedInvestigations = parseIbdInvestigations(patient.ibdInvestigations);
   const ibdInvestigations = serializeIbdInvestigations(parsedInvestigations);
 
+  const currentIbdMedicationsRows = serializeCurrentIbdMedications(
+    normalizeCurrentIbdMedications(parseCurrentIbdMedications(patient.currentIbdMedicationsRows)),
+  );
+
   const mmr =
     String(patient.mmr ?? '').trim() && patient.mmr !== '{}'
       ? patient.mmr
@@ -103,6 +112,7 @@ export function buildAssessmentFormState(patient: PatientWithUser): AssessmentFo
     upperGiFindings,
     ucEndoscopicScoring,
     ibdInvestigations,
+    currentIbdMedicationsRows,
     mmr,
     varicella: patient.varicella ?? '{}',
     smokingStatus: normalizeSmokingStatusForForm(patient.smokingStatus),
@@ -154,6 +164,7 @@ const PATIENT_SAVE_FIELD_KEYS = [
   'recentImaging',
   'mostRecentDexaScan',
   'currentIbdMedications',
+  'currentIbdMedicationsRows',
   'failedTreatments',
   'tdmResults',
   'currentSupplements',

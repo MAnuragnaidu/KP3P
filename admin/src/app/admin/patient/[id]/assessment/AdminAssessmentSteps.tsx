@@ -11,6 +11,7 @@ import SesCdScoringTable from './SesCdScoringTable';
 import UpperGiFindingsTable from './UpperGiFindingsTable';
 import UcEndoscopicScoringTool from './UcEndoscopicScoringTool';
 import IbdInvestigationsForm from './IbdInvestigationsForm';
+import CurrentIbdMedicationsTable from './CurrentIbdMedicationsTable';
 
 const inter = "'Inter', sans-serif";
 
@@ -960,17 +961,9 @@ export const AdminStep6 = ({ data, updateData }: StepComponentProps) => (
   <IbdInvestigationsForm data={data} updateData={updateData} />
 );
 
-export const AdminStep7 = ({ data, updateData }: StepComponentProps) => (
+export const AdminStep8 = ({ data, updateData }: StepComponentProps) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-    {textArea(
-      'currentIbdMedications',
-      'Current IBD Medications with Duration',
-      data,
-      updateData,
-      true,
-      'For EACH medication: Name, dose, frequency, how long on this treatment',
-      'Placeholder: Example - Adalimumab 40mg SC q2weeks (started 18 months ago, dose increased 6 months ago)',
-    )}
+    <CurrentIbdMedicationsTable data={data} updateData={updateData} />
     {radioGroup(
       'responseToTreatment',
       'Response to Current Treatment',
@@ -985,45 +978,6 @@ export const AdminStep7 = ({ data, updateData }: StepComponentProps) => (
       updateData,
       true,
     )}
-    {textArea(
-      'tdmResults',
-      'Therapeutic Drug Monitoring Results',
-      data,
-      updateData,
-      false,
-      'If on biologics - drug levels, anti-drug antibodies, date',
-    )}
-    {textArea('currentSupplements', 'Current Vitamin D / Calcium Supplementation', data, updateData)}
-    <Grid2>
-      {radioGroup('steroidUse', 'Current or Recent Steroid Use', [
-        'Not on steroids',
-        'Currently on (less than 3 months)',
-        'Currently on steroids (more than 3 months)',
-        'Recently stopped (less than 3 months ago)',
-        'Steroid dependent (multiple courses)',
-      ], data, updateData)}
-    </Grid2>
-  </div>
-);
-
-const PREVIOUS_IBD_TREATMENTS_OPTIONS = [
-  'None (treatment-naive)',
-  '5-ASA (mesalamine, sulfasalazine)',
-  'Corticosteroids (prednisone, budesonide)',
-  'Azathioprine / 6-Mercaptopurine',
-  'Methotrexate',
-  'Infliximab (Remicade / Infimab / Inflixirel)',
-  'Adalimumab (Exemptia / Adfrar / Plamimumab / Mabura)',
-  'Vedolizumab',
-  'Ustekinumab',
-  'Tofacitinib',
-  'Upadacitinib',
-  'Other',
-] as const;
-
-export const AdminStep8 = ({ data, updateData }: StepComponentProps) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-    {checkboxGroup('previousTreatmentsTried', 'Previous IBD Treatments Tried', [...PREVIOUS_IBD_TREATMENTS_OPTIONS], data, updateData, true)}
     {textArea(
       'failedTreatments',
       'Details of Failed Treatments',

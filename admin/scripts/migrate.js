@@ -71,6 +71,7 @@ async function main() {
           dateMostRecentLabs: patient.dateMostRecentLabs || '',
 
           currentIbdMedications: patient.currentIbdMedications || '',
+          currentIbdMedicationsRows: patient.currentIbdMedicationsRows || '[]',
           failedTreatments: patient.failedTreatments || '',
           tdmResults: patient.tdmResults || '',
           currentSupplements: patient.currentSupplements || '',

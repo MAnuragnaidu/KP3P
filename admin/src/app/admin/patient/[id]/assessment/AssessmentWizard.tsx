@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   AdminStep1, AdminStep2, AdminStep4, AdminStep5,
-  AdminStep6, AdminStep7, AdminStep8, AdminStep9
+  AdminStep6, AdminStep8, AdminStep9
 } from './AdminAssessmentSteps';
 import type { PatientWithUser, AssessmentFormState, AssessmentUpdateFn } from '@/types/assessment-form';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -27,7 +27,6 @@ const stepLabels = [
   "Disease Characteristics",
   "Symptoms",
   "Investigations",
-  "Current Treatment",
   "Treatment History",
   "Vaccination History",
   "Screening",
@@ -38,18 +37,23 @@ const stepHeadings = [
   "Disease Characteristics",
   "Disease Activity & Symptoms",
   "Laboratory & Investigations",
-  "Current Treatment",
   "Treatment History",
   "Vaccination History",
   "Infection Screening & Comorbidities",
 ];
 
-const ASSESSMENT_TOTAL_STEPS = 8;
+const ASSESSMENT_TOTAL_STEPS = 7;
+
+/** Map saved step index after removing the standalone Current Treatment step. */
+function mapLegacyAssessmentStep(step: number): number {
+  if (step <= 5) return step;
+  return Math.min(step - 1, ASSESSMENT_TOTAL_STEPS);
+}
 
 function clampAssessmentStep(step: unknown): number {
   const n = typeof step === 'number' ? step : parseInt(String(step ?? ''), 10);
   if (!Number.isFinite(n)) return 1;
-  return Math.min(Math.max(n, 1), ASSESSMENT_TOTAL_STEPS);
+  return mapLegacyAssessmentStep(Math.min(Math.max(n, 1), 8));
 }
 
 function completedStepsBefore(step: number): Set<number> {
@@ -220,37 +224,12 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
     }
 
     if (stepNum === 5) {
-      const requiredFields = [
-        { key: 'currentIbdMedications', label: 'Current IBD Medications with Duration' },
-        { key: 'responseToTreatment', label: 'Response to Current Treatment' },
-      ];
-      const missing = requiredFields
-        .filter(({ key }) => !String(assessmentField(data, key) ?? '').trim())
-        .map(({ label }) => label);
-
-      if (missing.length > 0) {
-        return missing.join(', ');
+      if (!String(assessmentField(data, 'responseToTreatment') ?? '').trim()) {
+        return 'Response to Current Treatment';
       }
     }
 
-    if (stepNum === 6) {
-      let tried: unknown[] = [];
-      const raw = data?.previousTreatmentsTried;
-      if (Array.isArray(raw)) tried = raw;
-      else if (typeof raw === 'string') {
-        try {
-          const p = JSON.parse(raw);
-          if (Array.isArray(p)) tried = p;
-        } catch {
-          /* ignore */
-        }
-      }
-      if (tried.length === 0) {
-        return 'Previous IBD Treatments Tried';
-      }
-    }
-
-    if (stepNum === 8) {
+    if (stepNum === 7) {
       const missing: string[] = [];
       if (!isNonEmpty(data?.tbScreening)) missing.push('TB Screening Status');
       if (!isNonEmpty(data?.hepBSurfaceAg)) missing.push('Hepatitis B Surface Antigen');
@@ -626,10 +605,9 @@ export default function AssessmentWizard({ patient }: { patient: PatientWithUser
             {currentStep === 2 && <AdminStep4 data={formData} updateData={updateData} />}
             {currentStep === 3 && <AdminStep5 data={formData} updateData={updateData} />}
             {currentStep === 4 && <AdminStep6 data={formData} updateData={updateData} />}
-            {currentStep === 5 && <AdminStep7 data={formData} updateData={updateData} />}
-            {currentStep === 6 && <AdminStep8 data={formData} updateData={updateData} />}
-            {currentStep === 7 && <AdminStep2 data={formData} updateData={updateData} />}
-            {currentStep === 8 && <AdminStep9 data={formData} updateData={updateData} />}
+            {currentStep === 5 && <AdminStep8 data={formData} updateData={updateData} />}
+            {currentStep === 6 && <AdminStep2 data={formData} updateData={updateData} />}
+            {currentStep === 7 && <AdminStep9 data={formData} updateData={updateData} />}
           </div>
 
           {error && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12, fontFamily: "'Inter', sans-serif" }}>{error}</p>}

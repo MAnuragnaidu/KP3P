@@ -14,6 +14,11 @@ import {
   serializeUpperGiFindings,
 } from '@/lib/upper-gi-findings';
 import { normalizeIbdInvestigations, parseIbdInvestigations, serializeIbdInvestigations } from '@/lib/ibd-investigations';
+import {
+  normalizeCurrentIbdMedications,
+  parseCurrentIbdMedications,
+  serializeCurrentIbdMedications,
+} from '@/lib/current-ibd-medications';
 
 function normalizeJsonArray(val: unknown): string {
   if (Array.isArray(val)) return JSON.stringify(val);
@@ -146,6 +151,9 @@ export function patientCreateDataFromBody(body: Record<string, unknown>): Prisma
     recentImaging: typeof b.recentImaging === 'string' ? b.recentImaging : '',
     mostRecentDexaScan: typeof b.mostRecentDexaScan === 'string' ? b.mostRecentDexaScan : '',
     currentIbdMedications: typeof b.currentIbdMedications === 'string' ? b.currentIbdMedications : '',
+    currentIbdMedicationsRows: serializeCurrentIbdMedications(
+      normalizeCurrentIbdMedications(parseCurrentIbdMedications(b.currentIbdMedicationsRows)),
+    ),
     failedTreatments: typeof b.failedTreatments === 'string' ? b.failedTreatments : '',
     tdmResults: typeof b.tdmResults === 'string' ? b.tdmResults : '',
     currentSupplements: typeof b.currentSupplements === 'string' ? b.currentSupplements : '',

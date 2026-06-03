@@ -107,7 +107,7 @@ export const IBD_INVESTIGATION_GROUPS = [
     title: 'DRUG MONITORING (Biologics)',
     fields: [
       { id: 'drugTroughLevel', label: 'Drug Trough Level' },
-      { id: 'antiDrugAntibodies', label: 'Anti-Drug Antibodies (ADA)' },
+      { id: 'antiDrugAntibodies', label: 'Anti-Drug Antibodies (ATI)' },
     ],
   },
 ] as const;
