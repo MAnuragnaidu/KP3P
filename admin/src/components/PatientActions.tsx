@@ -33,6 +33,11 @@ function parseJsonStringArray(raw: unknown): string[] {
   return [];
 }
 
+function joinJsonArray(raw: unknown): string | undefined {
+  const items = parseJsonStringArray(raw);
+  return items.length ? items.join(', ') : undefined;
+}
+
 function toKP3PPatient(patient: PatientWithUser): PatientData {
   const labs = { hb: '', tlc: '', platelets: '', crp: '', albumin: '' };
   const comorbidities = parseJsonStringArray(patient.comorbidities);
@@ -41,6 +46,7 @@ function toKP3PPatient(patient: PatientWithUser): PatientData {
     : undefined;
   const specialNotes = specialConsiderationsRaw ? [specialConsiderationsRaw] : undefined;
   const surg = parseJsonStringArray(patient.previousSurgeries);
+  const priorTreatments = joinJsonArray(patient.previousTreatmentsTried);
   return {
     name: patient.name || '',
     id: String(patient.id ?? ''),
@@ -64,14 +70,35 @@ function toKP3PPatient(patient: PatientWithUser): PatientData {
     abdPain: patient.abdominalPain || '',
     weightLoss: patient.weightLoss || '',
     ...labs,
-    mayoScore: '',
-    endoscopyFindings: '',
-    imagingFindings: '',
-    dexa: '',
+    mayoScore: patient.activityScore || '',
+    endoscopyFindings: patient.colonoscopyFindings || '',
+    imagingFindings: patient.recentImaging || '',
+    dexa: patient.mostRecentDexaScan || '',
     currentMeds: patient.currentIbdMedications || '',
     treatmentResponse: patient.responseToTreatment || '',
     tdm: patient.tdmResults || '',
     priorFailed: patient.failedTreatments || '',
+    steroidUse: patient.steroidUse || undefined,
+    currentSupplements: patient.currentSupplements || undefined,
+    previousTreatmentsTried: priorTreatments,
+    pregnancyPlanning: patient.pregnancyPlanning || undefined,
+    activityScore: patient.activityScore || undefined,
+    impactOnQoL: patient.impactOnQoL || undefined,
+    currentIbdMedicationsRows: patient.currentIbdMedicationsRows || undefined,
+    ibdInvestigations: patient.ibdInvestigations || undefined,
+    investigationsDate: patient.dateMostRecentLabs || undefined,
+    sesCdScoring: patient.sesCdScoring || undefined,
+    upperGiFindings: patient.upperGiFindings || undefined,
+    ucEndoscopicScoring: patient.ucEndoscopicScoring || undefined,
+    sesCdClinicalNotes: patient.sesCdClinicalNotes || undefined,
+    colonoscopyFindings: patient.colonoscopyFindings || undefined,
+    recentImaging: patient.recentImaging || undefined,
+    mostRecentDexaScan: patient.mostRecentDexaScan || undefined,
+    montrealAgeAtDiagnosis: patient.montrealAgeAtDiagnosis || undefined,
+    ucExtent: patient.ucExtent || undefined,
+    diseaseLocation: patient.diseaseLocation || undefined,
+    diseaseBehavior: patient.diseaseBehavior || undefined,
+    perianalDisease: patient.perianalDisease || undefined,
     tbStatus: patient.tbScreening || '',
     hbsAg: patient.hepBSurfaceAg || '',
     antiHBs: patient.hepBSurfaceAb || '',
@@ -277,18 +304,6 @@ Format: 3-page concise care plan. Part1(Clinical Protocol):English. Part2(Patien
           </>
         ) : null}
 
-        {/* ── EDIT DETAILS BUTTON ── */}
-        <button
-          onClick={() => router.push(`/admin/patient/${patient.id}/edit`)}
-          style={{
-            fontSize: 12, padding: '6px 14px', borderRadius: 7,
-            border: 'none', background: '#14b8a6', color: '#0f172a',
-            cursor: 'pointer', fontWeight: 700,
-            fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
-          }}
-        >
-          Edit Details
-        </button>
       </div>
 
     </>

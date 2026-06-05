@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 export default async function PatientEditPage({ params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const userRole = cookieStore.get('userRole');
-  
+
   if (userRole?.value !== 'ADMIN') {
     redirect('/');
   }
@@ -14,7 +14,7 @@ export default async function PatientEditPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const patient = await prisma.patient.findUnique({
     where: { id: parseInt(id, 10) },
-    include: { user: true }
+    include: { user: true },
   });
 
   if (!patient) {

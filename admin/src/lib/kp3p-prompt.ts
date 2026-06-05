@@ -1,3 +1,11 @@
+import {
+  formatEndoscopicDataForPrompt,
+  formatInvestigationsForPrompt,
+  formatMedicationHistoryForPrompt,
+  hasPriorMedicationHistory,
+  montrealDetailLine,
+} from './kp3p-patient-context';
+
 export interface PatientData {
   name: string; id: string; age: number; sex: string; occupation: string;
   location: string; smoking: string; diagnosis: string; montreal: string;
@@ -25,6 +33,27 @@ export interface PatientData {
   vaccineMmr?: string;
   vaccineVaricella?: string;
   specialConsiderations?: string;
+  steroidUse?: string;
+  currentSupplements?: string;
+  previousTreatmentsTried?: string;
+  pregnancyPlanning?: string;
+  activityScore?: string;
+  impactOnQoL?: string;
+  currentIbdMedicationsRows?: string;
+  ibdInvestigations?: string;
+  investigationsDate?: string;
+  sesCdScoring?: string;
+  upperGiFindings?: string;
+  ucEndoscopicScoring?: string;
+  sesCdClinicalNotes?: string;
+  colonoscopyFindings?: string;
+  recentImaging?: string;
+  mostRecentDexaScan?: string;
+  montrealAgeAtDiagnosis?: string;
+  ucExtent?: string;
+  diseaseLocation?: string;
+  diseaseBehavior?: string;
+  perianalDisease?: string;
 }
 
 function ageAtDxLabel(patient: PatientData): string {
@@ -34,6 +63,12 @@ function ageAtDxLabel(patient: PatientData): string {
 }
 
 function labsLine(patient: PatientData): string {
+  const fromInvestigations = formatInvestigationsForPrompt(
+    patient.ibdInvestigations,
+    patient.investigationsDate,
+  );
+  if (fromInvestigations !== 'None documented') return fromInvestigations;
+
   const parts = [
     patient.hb && `Hb ${patient.hb}`,
     patient.tlc && `TLC ${patient.tlc}`,
@@ -48,12 +83,40 @@ function vaccineStatus(patient: PatientData, key: keyof NonNullable<PatientData[
   return direct ?? patient.vaccines?.[key] ?? 'Unknown';
 }
 
+function patientContext(patient: PatientData) {
+  const medicationHistory = formatMedicationHistoryForPrompt(
+    patient.currentIbdMedicationsRows,
+    patient.currentMeds,
+  );
+  const endoscopicSummary = formatEndoscopicDataForPrompt({
+    sesCdScoring: patient.sesCdScoring,
+    upperGiFindings: patient.upperGiFindings,
+    ucEndoscopicScoring: patient.ucEndoscopicScoring,
+    sesCdClinicalNotes: patient.sesCdClinicalNotes,
+    colonoscopyFindings: patient.colonoscopyFindings,
+    endoscopyFindings: patient.endoscopyFindings,
+  });
+  const priorMedsAck = hasPriorMedicationHistory(
+    patient.currentIbdMedicationsRows,
+    patient.priorFailed,
+    patient.previousTreatmentsTried,
+  );
+
+  return {
+    medicationHistory,
+    endoscopicSummary,
+    montrealDetails: montrealDetailLine(patient),
+    priorMedsAck,
+  };
+}
+
 export function buildKP3PPrompt(patient: PatientData): string {
   const protocolDate = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   const patientRef = patient.id ? `Patient ID ${patient.id}` : 'Patient';
   const doc2Language = patient.patientLanguage?.trim() && patient.patientLanguage.toLowerCase() !== 'english'
     ? patient.patientLanguage.trim()
     : 'English';
+  const ctx = patientContext(patient);
 
   return `Fill the HTML template below using the patient record. Perform all KP-3P reasoning internally — output only the three final documents.
 
@@ -66,6 +129,8 @@ RULES:
 6. Do NOT include physician name, clinic, phone numbers, or website — leave injection marker divs unchanged.
 7. Use [Patient Name] in patient-facing sections (never the legal name).
 8. Document 2 language: ${doc2Language}.
+9. Document 1 must include the complete K — Medication History Summary section (mandatory).
+10. Never recommend a drug in a mechanism class that previously failed without documented rationale.
 
 ---BEGIN TEMPLATE---
 
@@ -75,11 +140,22 @@ RULES:
 <p><b>Patient:</b> ${patientRef} | <b>Date:</b> ${protocolDate} | <b>KP-3P v1.0</b></p>
 <p><b>Diagnosis:</b> ${patient.diagnosis} | <b>Classification:</b> ${patient.montreal} | <b>Severity:</b> ${patient.severity}</p>
 
+<h4>K — MEDICATION HISTORY SUMMARY</h4>
+<table>
+  <tr><th>Category</th><th>Drug</th><th>Dose / Duration</th><th>Status</th><th>Reason for Stopping</th></tr>
+  <tr><td><b>Current</b></td><td>[Drug name]</td><td>[Dose / Duration]</td><td>Active</td><td>—</td></tr>
+  <tr><td><b>Prior</b></td><td>[Drug name]</td><td>[Dose / Duration]</td><td>Stopped</td><td>[Primary NR / Secondary LOR / Side effect / Remission]</td></tr>
+</table>
+<p><b>Steroid Exposure:</b> [Number of courses] courses | Last course: [Date] | Steroid dependent: Yes / No (source: ${patient.steroidUse || 'Not documented'})</p>
+<p><b>Immunosuppression Level at Presentation:</b> None / Low / Moderate / High</p>
+<p><b>Biologic-naive:</b> Yes / No | <b>Prior biologic failures:</b> [Number and agents]</p>
+<p><b>Clinical Implication:</b> [One sentence on how medication history impacts risk level and treatment selection]</p>
+
 <h4>P1 — RISK STRATIFICATION</h4>
 <table>
   <tr><th>Parameter</th><th>Finding</th></tr>
-  <tr><td><b>Risk Level</b></td><td>[🔴 HIGH / 🟡 MODERATE / 🟢 LOW]</td></tr>
-  <tr><td><b>Key Risk Factors</b></td><td>[Bullet list of factors present]</td></tr>
+  <tr><td><b>Risk Level</b></td><td>[HIGH / MODERATE / LOW]</td></tr>
+  <tr><td><b>Key Risk Factors</b></td><td>[Bullet list — include steroid dependence / prior biologic failure if applicable]</td></tr>
   <tr><td><b>Treatment Approach</b></td><td>[Step-up / Top-down / Accelerated step-up]</td></tr>
   <tr><td><b>Guideline Basis</b></td><td>[ECCO / ACG / STRIDE-II reference]</td></tr>
 </table>
@@ -105,16 +181,18 @@ RULES:
   <li><b>HIV</b> (if indicated): ${patient.antiHIV ?? 'Not tested'} — [Action]</li>
   <li><b>Baseline labs:</b> CBC, CMP, LFTs — [Status/action]</li>
 </ul>
+<p><b>Note:</b> If patient is already on immunosuppression, live vaccines are CONTRAINDICATED. Flag this explicitly.</p>
 <p><b>Vaccination Protocol</b> (per ACG Guidelines):</p>
 <table>
-  <tr><th>Vaccine</th><th>Current Status</th><th>Priority / Timing</th></tr>
-  <tr><td>MMR / Varicella (if non-immune)</td><td>MMR: ${vaccineStatus(patient, 'mmr', patient.vaccineMmr)} | Varicella: ${vaccineStatus(patient, 'varicella', patient.vaccineVaricella)}</td><td>🔴 URGENT — ≥4 weeks BEFORE immunosuppression</td></tr>
-  <tr><td>Pneumococcal</td><td>${vaccineStatus(patient, 'pneumococcal', patient.vaccinePneumococcal)}</td><td>🟡 HIGH — before or at treatment start</td></tr>
-  <tr><td>Shingrix (×2 doses)</td><td>${vaccineStatus(patient, 'zoster', patient.vaccineZoster)}</td><td>🟡 HIGH — before or at treatment start</td></tr>
-  <tr><td>Hepatitis B</td><td>${vaccineStatus(patient, 'hepatitisB', patient.vaccineHepB)}</td><td>🟡 HIGH if non-immune</td></tr>
-  <tr><td>Influenza</td><td>${vaccineStatus(patient, 'influenza', patient.vaccineInfluenza)}</td><td>🟢 ROUTINE — annual</td></tr>
-  <tr><td>COVID-19</td><td>${vaccineStatus(patient, 'covid19', patient.vaccineCovid)}</td><td>🟢 ROUTINE</td></tr>
-  <tr><td>Tetanus / Tdap</td><td>${vaccineStatus(patient, 'tdap', patient.vaccineTetanus)}</td><td>🟢 Update if due</td></tr>
+  <tr><th>Vaccine</th><th>Priority</th><th>Timing Constraint</th></tr>
+  <tr><td>MMR / Varicella (if non-immune) — MMR: ${vaccineStatus(patient, 'mmr', patient.vaccineMmr)}; Varicella: ${vaccineStatus(patient, 'varicella', patient.vaccineVaricella)}</td><td>URGENT</td><td>≥4 weeks BEFORE immunosuppression — CONTRAINDICATED after</td></tr>
+  <tr><td>Pneumococcal (PCV20 or PCV15 then PPSV23) — ${vaccineStatus(patient, 'pneumococcal', patient.vaccinePneumococcal)}</td><td>HIGH</td><td>Before or at treatment start</td></tr>
+  <tr><td>Shingrix (×2 doses, 2–6 months apart) — ${vaccineStatus(patient, 'zoster', patient.vaccineZoster)}</td><td>HIGH</td><td>Before or at treatment start</td></tr>
+  <tr><td>Hepatitis B (if non-immune) — ${vaccineStatus(patient, 'hepatitisB', patient.vaccineHepB)}</td><td>HIGH</td><td>Accelerated schedule if needed</td></tr>
+  <tr><td>Influenza (inactivated) — ${vaccineStatus(patient, 'influenza', patient.vaccineInfluenza)}</td><td>ROUTINE</td><td>Annual</td></tr>
+  <tr><td>HPV</td><td>IF ≤26 years</td><td>Per schedule</td></tr>
+  <tr><td>COVID-19 — ${vaccineStatus(patient, 'covid19', patient.vaccineCovid)}</td><td>ROUTINE</td><td>Per current recommendations</td></tr>
+  <tr><td>Tetanus / Tdap — ${vaccineStatus(patient, 'tdap', patient.vaccineTetanus)}</td><td>ROUTINE</td><td>Update if due</td></tr>
 </table>
 <p><b>Evidence:</b> ACG Vaccine Guidelines (uploaded)</p>
 
@@ -125,9 +203,9 @@ RULES:
   <tr><td><b>Medication</b></td><td>[Drug name]</td><td>[ECCO/ACG citation]</td></tr>
   <tr><td><b>Dose &amp; Route</b></td><td>[Specific dose, route]</td><td></td></tr>
   <tr><td><b>Schedule</b></td><td>[Frequency]</td><td></td></tr>
-  <tr><td><b>Rationale</b></td><td>[Why this drug — prior failures: ${patient.priorFailed ?? 'None'}]</td><td></td></tr>
+  <tr><td><b>Rationale</b></td><td>[Why this drug — reference medication history; prior failures: ${patient.priorFailed ?? 'None'}; do not repeat failed mechanism class without justification]</td><td></td></tr>
   <tr><td><b>TDM</b> (if biologic)</td><td>[Timing + target trough levels]</td><td></td></tr>
-  <tr><td><b>Alternative if no response</b></td><td>[Alternative agent]</td><td></td></tr>
+  <tr><td><b>Alternative if no response</b></td><td>[Alternative agent — must not repeat failed mechanism class without justification]</td><td></td></tr>
 </table>
 <p><b>Monitoring Schedule:</b></p>
 <table>
@@ -144,16 +222,17 @@ RULES:
 <table>
   <tr><th>Surveillance</th><th>Schedule</th><th>Notes</th></tr>
   <tr><td>Colorectal Cancer</td><td>From year 8 post-diagnosis</td><td>Earlier if PSC, extensive colitis, family history</td></tr>
-  <tr><td>Skin Cancer</td><td>Annual dermatology review</td><td>If on thiopurines or biologics</td></tr>
+  <tr><td>Skin Cancer (dermatology review)</td><td>Annual</td><td>If on thiopurines or biologics</td></tr>
   <tr><td>Bone Health (DEXA)</td><td>If steroids &gt;3 months</td><td>Ca²⁺ + Vit D; bisphosphonates if indicated</td></tr>
   <tr><td>Cervical Cancer</td><td>Age-appropriate; more frequent on immunosuppression</td><td></td></tr>
   <tr><td>Lymphoma awareness</td><td>Ongoing</td><td>Especially thiopurine + biologic combination</td></tr>
 </table>
-<p><b>Drug-Specific Monitoring:</b> [Agent-specific monitoring per uploaded guidelines]</p>
+<p><b>If Biologics:</b> TDM at weeks 14–16 and at loss of response; target trough levels per uploaded guidelines; anti-drug antibody testing if loss of response; annual TB screening if high risk.</p>
+<p><b>If Methotrexate:</b> CBC and LFTs every 2–4 weeks initially, then every 8–12 weeks; folic acid 1 mg daily supplementation.</p>
 
 <h4>⚠️ PHYSICIAN ALERTS</h4>
 <ul>
-  <li>[State "None identified" or list urgent flags for physician review]</li>
+  <li>[State "None identified" or list urgent flags — e.g., prior biologic failure, steroid dependent, pregnancy planning, already on immunosuppression]</li>
 </ul>
 <p><b>Guidelines Referenced:</b> STRIDE-II | ECCO | ACG | [Others as uploaded]</p>
 
@@ -176,6 +255,7 @@ RULES:
   <li><b>⚠️ Important:</b> Keep taking it even when you feel well — stopping early is the number one reason for flare-ups</li>
 </ul>
 <p><b>Side effects to watch for:</b> [List 2–3 most relevant, in plain language]</p>
+${ctx.priorMedsAck ? '<p>[Include if applicable: We have reviewed the medications you have tried before and selected this treatment based on what will work best for you now.]</p>' : ''}
 
 <h4>Before We Start: Your Safety Checklist</h4>
 <p><b>Tests needed first:</b></p>
@@ -205,7 +285,7 @@ RULES:
 <p><b>Foods that may help</b> (especially during symptoms): Well-cooked vegetables, lean proteins, white rice, ripe bananas, plenty of water</p>
 <p><b>Foods to limit</b> (especially during symptoms): Raw vegetables and fruits, spicy foods, fried or fatty foods</p>
 <p><b>Lifestyle:</b> Manage stress, gentle regular exercise (walking, swimming), adequate sleep</p>
-${patient.smoking && patient.smoking !== 'Never smoked' ? '<p><b>Quit smoking</b> — this significantly improves outcomes for Crohn\'s disease.</p>' : ''}
+${patient.smoking && !/never/i.test(patient.smoking) ? '<p><b>Quit smoking</b> — this significantly improves outcomes for Crohn\'s disease.</p>' : ''}
 
 <h4>Your Follow-Up Appointments</h4>
 <table>
@@ -240,11 +320,11 @@ ${patient.smoking && patient.smoking !== 'Never smoked' ? '<p><b>Quit smoking</b
 <b>Date:</b> ${protocolDate} &nbsp;&nbsp; <b>Diagnosis:</b> ${patient.diagnosis}</p>
 
 <h4>℞ — MEDICATIONS</h4>
-<p>[For each medication from Document 1, tag [✅ RECOMMENDED — INCLUDE] or [⚠️ OPTIONAL — CONFIRM]. Include dose, form, frequency, duration.]</p>
+<p>[For each medication from Document 1, tag [RECOMMENDED — INCLUDE] or [OPTIONAL — CONFIRM]. Include dose, form, frequency, duration.]</p>
 <ol>
-  <li><b>[Drug Name]</b> [✅ RECOMMENDED — INCLUDE]<br>
+  <li><b>[Drug Name]</b> [RECOMMENDED — INCLUDE]<br>
   Dose: [e.g., Mesalazine 4 g/day] | Form: [Oral] | Frequency: [Once daily] | Duration: [Ongoing — review at 3 months]</li>
-  <li><b>[Drug Name]</b> [⚠️ OPTIONAL — CONFIRM]<br>
+  <li><b>[Drug Name]</b> [OPTIONAL — CONFIRM]<br>
   Dose: [e.g., Prednisolone 40 mg] | Form: [Oral tablet] | Frequency: [Once daily, taper] | Duration: [8 weeks with tapering]</li>
 </ol>
 
@@ -252,23 +332,24 @@ ${patient.smoking && patient.smoking !== 'Never smoked' ? '<p><b>Quit smoking</b
 <p><b>Immediate (Before Starting Treatment):</b></p>
 <table>
   <tr><th>Investigation</th><th>Approval Tag</th><th>Timing</th></tr>
-  <tr><td>IGRA / Mantoux + CXR</td><td>[✅ RECOMMENDED]</td><td>Once, before treatment</td></tr>
-  <tr><td>HBsAg, Anti-HBs, Anti-HBc</td><td>[✅ RECOMMENDED]</td><td>Once, before treatment</td></tr>
-  <tr><td>Anti-HCV</td><td>[✅ RECOMMENDED]</td><td>Once, before treatment</td></tr>
-  <tr><td>CBC, CRP, ESR</td><td>[✅ RECOMMENDED]</td><td>Baseline</td></tr>
-  <tr><td>LFTs, RFTs, Albumin</td><td>[✅ RECOMMENDED]</td><td>Baseline</td></tr>
-  <tr><td>Fecal Calprotectin</td><td>[✅ RECOMMENDED]</td><td>Baseline</td></tr>
-  <tr><td>[Drug-specific test e.g. TPMT/NUDT15]</td><td>[⚠️ OPTIONAL — CONFIRM]</td><td>Before thiopurine</td></tr>
+  <tr><td>IGRA / Mantoux + CXR</td><td>[RECOMMENDED — INCLUDE]</td><td>Once, before treatment</td></tr>
+  <tr><td>HBsAg, Anti-HBs, Anti-HBc</td><td>[RECOMMENDED — INCLUDE]</td><td>Once, before treatment</td></tr>
+  <tr><td>Anti-HCV</td><td>[RECOMMENDED — INCLUDE]</td><td>Once, before treatment</td></tr>
+  <tr><td>CBC, CRP, ESR</td><td>[RECOMMENDED — INCLUDE]</td><td>Baseline</td></tr>
+  <tr><td>LFTs, RFTs, Albumin</td><td>[RECOMMENDED — INCLUDE]</td><td>Baseline</td></tr>
+  <tr><td>Fecal Calprotectin</td><td>[RECOMMENDED — INCLUDE]</td><td>Baseline</td></tr>
+  <tr><td>[Drug-specific test e.g. TPMT/NUDT15]</td><td>[OPTIONAL — CONFIRM]</td><td>Before thiopurine</td></tr>
 </table>
 <p><b>Ongoing Monitoring:</b></p>
 <table>
   <tr><th>Investigation</th><th>Approval Tag</th><th>Frequency</th></tr>
-  <tr><td>CBC + CRP</td><td>[✅ RECOMMENDED]</td><td>Every 3 months</td></tr>
-  <tr><td>LFTs</td><td>[✅ RECOMMENDED]</td><td>Every 3 months</td></tr>
-  <tr><td>Fecal Calprotectin</td><td>[✅ RECOMMENDED]</td><td>Every 3–6 months</td></tr>
-  <tr><td>Colonoscopy / Sigmoidoscopy</td><td>[✅ RECOMMENDED]</td><td>Month 6–12</td></tr>
-  <tr><td>MRE (if Crohn's Disease)</td><td>[⚠️ OPTIONAL — CONFIRM]</td><td>Month 12</td></tr>
-  <tr><td>DEXA Scan</td><td>[⚠️ OPTIONAL — CONFIRM]</td><td>If steroids &gt;3 months</td></tr>
+  <tr><td>CBC + CRP</td><td>[RECOMMENDED — INCLUDE]</td><td>Every 3 months</td></tr>
+  <tr><td>LFTs</td><td>[RECOMMENDED — INCLUDE]</td><td>Every 3 months</td></tr>
+  <tr><td>Fecal Calprotectin</td><td>[RECOMMENDED — INCLUDE]</td><td>Every 3–6 months</td></tr>
+  <tr><td>Colonoscopy / Sigmoidoscopy</td><td>[RECOMMENDED — INCLUDE]</td><td>Month 6–12</td></tr>
+  <tr><td>MRE (if Crohn's Disease)</td><td>[OPTIONAL — CONFIRM]</td><td>Month 12</td></tr>
+  <tr><td>DEXA Scan</td><td>[OPTIONAL — CONFIRM]</td><td>If steroids &gt;3 months</td></tr>
+  <tr><td>Annual dermatology review</td><td>[OPTIONAL — CONFIRM]</td><td>If on thiopurines/biologics</td></tr>
 </table>
 
 <h4>📋 PATIENT INSTRUCTIONS</h4>
@@ -287,20 +368,22 @@ ${patient.smoking && patient.smoking !== 'Never smoked' ? '<p><b>Quit smoking</b
 PATIENT DATA (de-identified — use for clinical reasoning; do not output legal name):
 Ref: ${patientRef} | Age: ${patient.age}y${patient.dateOfBirth ? ` | DOB: ${patient.dateOfBirth}` : ''} | Age at Dx: ${ageAtDxLabel(patient)}y | Sex: ${patient.sex}
 Occupation: ${patient.occupation ?? 'N/A'} | Location: ${patient.location ?? 'N/A'} | Smoking: ${patient.smoking ?? 'N/A'}
-Diagnosis: ${patient.diagnosis} | Montreal: ${patient.montreal} | Duration: ${patient.duration ?? 'N/A'}
+Diagnosis: ${patient.diagnosis} | Montreal: ${patient.montreal} | Montreal detail: ${ctx.montrealDetails} | Duration: ${patient.duration ?? 'N/A'}
 Prior Surgeries: ${patient.priorSurgeries ?? 'None'}
-Severity: ${patient.severity} | Bowel Freq: ${patient.bowelFreq ?? 'N/A'} | Blood: ${patient.bloodInStool ?? 'N/A'}
-Pain: ${patient.abdPain ?? 'N/A'} | Weight Loss: ${patient.weightLoss ?? 'N/A'}
-Labs: ${labsLine(patient)}
-Endoscopy: ${patient.endoscopyFindings ?? 'Not provided'}
-Imaging: ${patient.imagingFindings ?? 'None'}
-Current Meds: ${patient.currentMeds ?? 'None'} | Response: ${patient.treatmentResponse ?? 'N/A'} | TDM: ${patient.tdm ?? 'N/A'}
-Prior Failed: ${patient.priorFailed ?? 'None'}
+Severity: ${patient.severity} | Activity score: ${patient.activityScore ?? 'N/A'} | Bowel Freq: ${patient.bowelFreq ?? 'N/A'} | Blood: ${patient.bloodInStool ?? 'N/A'}
+Pain: ${patient.abdPain ?? 'N/A'} | QoL impact: ${patient.impactOnQoL ?? 'N/A'} | Weight Loss: ${patient.weightLoss ?? 'N/A'}
+Labs / Investigations: ${labsLine(patient)}
+Endoscopic data: ${ctx.endoscopicSummary}
+Imaging: ${patient.recentImaging || patient.imagingFindings || 'None'} | DEXA: ${patient.mostRecentDexaScan || patient.dexa || 'Not done'}
+Medication history (structured): ${ctx.medicationHistory}
+Treatment response: ${patient.treatmentResponse ?? 'N/A'} | TDM: ${patient.tdm ?? 'N/A'} | Steroid use: ${patient.steroidUse ?? 'Not documented'}
+Prior treatments tried: ${patient.previousTreatmentsTried ?? 'None'} | Failed treatment details: ${patient.priorFailed ?? 'None'}
+Supplements: ${patient.currentSupplements ?? 'None'}
 TB: ${patient.tbStatus ?? 'Not documented'} | HBsAg: ${patient.hbsAg ?? 'Not tested'} | Anti-HBs: ${patient.antiHBs ?? 'Not tested'} | Anti-HBc: ${patient.antiHBc ?? 'Not tested'}
 Anti-HCV: ${patient.antiHCV ?? 'Not tested'} | Anti-HIV: ${patient.antiHIV ?? 'Not tested'}
 Vaccines — Influenza: ${vaccineStatus(patient, 'influenza', patient.vaccineInfluenza)} | COVID: ${vaccineStatus(patient, 'covid19', patient.vaccineCovid)} | Pneumococcal: ${vaccineStatus(patient, 'pneumococcal', patient.vaccinePneumococcal)}
 Hep B: ${vaccineStatus(patient, 'hepatitisB', patient.vaccineHepB)} | Hep A: ${vaccineStatus(patient, 'hepatitisA', patient.vaccineHepA)} | Hep E: ${patient.vaccineHepE ?? 'Unknown'} | Zoster: ${vaccineStatus(patient, 'zoster', patient.vaccineZoster)} | MMR: ${vaccineStatus(patient, 'mmr', patient.vaccineMmr)} | Varicella: ${vaccineStatus(patient, 'varicella', patient.vaccineVaricella)} | Tetanus/Tdap: ${vaccineStatus(patient, 'tdap', patient.vaccineTetanus)}
-Comorbidities: ${patient.comorbidities?.join(', ') ?? 'None'} | EIM: ${patient.eim ?? 'None'}
+Comorbidities: ${patient.comorbidities?.join(', ') ?? 'None'} | EIM: ${patient.eim ?? 'None'} | Pregnancy planning: ${patient.pregnancyPlanning ?? 'Not specified'}
 Special: ${patient.specialConsiderations ?? patient.specialNotes?.join('; ') ?? 'None'}
 Preferred patient-facing language: ${doc2Language}`;
 }

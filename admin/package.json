@@ -13,6 +13,7 @@
     "test:generate-care-sheet": "node scripts/test-generate-care-sheet.mjs",
     "test:llm": "ts-node -P tsconfig.scripts.json scripts/testLLM.ts",
     "count:llm-tokens": "ts-node -P tsconfig.scripts.json scripts/countLLMPayloadTokens.ts",
+    "export:llm-prompt": "ts-node -P tsconfig.scripts.json scripts/exportLLMPromptToMd.ts",
     "seed:rulebook-text": "ts-node -P tsconfig.scripts.json scripts/seedRulebookText.ts"
   },
   "dependencies": {

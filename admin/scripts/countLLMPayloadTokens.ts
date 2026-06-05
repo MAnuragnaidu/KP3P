@@ -10,66 +10,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CARE_SHEET_SYSTEM_PROMPT } from '../src/lib/care-sheet-system-prompt';
 import { loadIbdRulebookText } from '../src/lib/load-ibd-rulebook';
 import { breakdownCareSheetPayload } from '../src/lib/llm-payload-stats';
-import { buildKP3PPrompt, type PatientData } from '../src/lib/kp3p-prompt';
+import { buildKP3PPrompt } from '../src/lib/kp3p-prompt';
+import { sampleKP3PPatient } from './sampleKP3PPatient';
 
 const adminRoot = path.join(__dirname, '..');
 dotenv.config({ path: path.join(adminRoot, '.env') });
 dotenv.config({ path: path.join(adminRoot, '.env.local'), override: true });
-
-/** Representative patient for sizing (matches typical assessment fields). */
-const SAMPLE_PATIENT: PatientData = {
-  name: 'Patient ID 42',
-  id: '42',
-  age: 45,
-  sex: 'Female',
-  occupation: 'Teacher',
-  location: 'Urban clinic',
-  smoking: 'Never',
-  diagnosis: "Crohn's disease",
-  montreal: 'L2B1',
-  severity: 'Moderate',
-  duration: '8 years',
-  ageAtDx: 37,
-  ageAtDiagnosis: 37,
-  priorSurgeries: 'None',
-  bowelFreq: '4–6/day',
-  bloodInStool: 'Occasional',
-  abdPain: 'Mild',
-  weightLoss: 'No',
-  hb: '11.2 g/dL',
-  tlc: '7.8',
-  platelets: '320',
-  crp: '18 mg/L',
-  albumin: '3.6 g/dL',
-  mayoScore: 'N/A',
-  endoscopyFindings: 'Moderate ileocolonic inflammation',
-  imagingFindings: 'Terminal ileum thickening',
-  dexa: 'Not done',
-  currentMeds: 'Adalimumab 40 mg q2w',
-  treatmentResponse: 'Partial response',
-  tdm: 'Trough 6 µg/mL',
-  priorFailed: 'Azathioprine intolerance',
-  tbStatus: 'Negative',
-  hbsAg: 'Negative',
-  antiHBs: 'Positive (immune)',
-  antiHBc: 'Negative',
-  antiHCV: 'Negative',
-  antiHIV: 'Negative',
-  comorbidities: ['Hypertension'],
-  eim: 'None',
-  specialConsiderations: 'Planning pregnancy in 12 months',
-  patientLanguage: 'English',
-  dateOfBirth: '1980-06-15',
-  vaccineInfluenza: '2024-10',
-  vaccineCovid: '2024-03',
-  vaccinePneumococcal: '2023',
-  vaccineHepB: 'Complete series',
-  vaccineHepA: '2022',
-  vaccineHepE: 'Unknown',
-  vaccineZoster: '2023',
-  vaccineTetanus: '2021',
-  vaccineMmr: 'Immune',
-};
 
 async function geminiTokenCount(
   systemPrompt: string,
@@ -100,7 +46,7 @@ async function geminiTokenCount(
 
 async function main(): Promise<void> {
   const rulebookText = await loadIbdRulebookText();
-  const patientPrompt = buildKP3PPrompt(SAMPLE_PATIENT);
+  const patientPrompt = buildKP3PPrompt(sampleKP3PPatient());
   const stats = breakdownCareSheetPayload(
     CARE_SHEET_SYSTEM_PROMPT,
     rulebookText,
